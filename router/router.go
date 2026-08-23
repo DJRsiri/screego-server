@@ -66,6 +66,11 @@ func Router(conf config.Config, rooms *ws.Rooms, users *auth.Users, version stri
 			Reason:  err,
 		})
 	})
+	router.Methods("GET").Path("/robots.txt").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = w.Write([]byte("User-agent: *\nDisallow: /\n"))
+	})
+
 	if conf.Prometheus {
 		log.Info().Msg("Prometheus enabled")
 		router.Methods("GET").Path("/metrics").Handler(basicAuth(promhttp.Handler(), users))
