@@ -12,6 +12,7 @@ import {
 } from './message';
 import {loadSettings, resolveCodecPlaceholder} from './settings';
 import {urlWithSlash} from './url';
+import {resolveQuality, StreamQuality} from './streamQuality';
 import {authModeToRoomMode} from './useConfig';
 import {getFromURL, useRoomID} from './useRoomID';
 
@@ -34,10 +35,40 @@ export interface UseRoom {
     share: () => void;
     setName: (name: string) => void;
     stopShare: () => void;
+    setStreamQuality: (quality: StreamQuality) => Promise<void>;
 }
 
 const relayConfig: Partial<RTCConfiguration> =
     window.location.search.indexOf('forceTurn=true') !== -1 ? {iceTransportPolicy: 'relay'} : {};
+
+const applyStreamQuality = async (
+    peer: RTCPeerConnection,
+    stream: MediaStream,
+    quality: StreamQuality
+): Promise<void> => {
+    const videoTrack = stream.getVideoTracks()[0];
+    if (!videoTrack) {
+        return;
+    }
+    const sourceHeight = videoTrack.getSettings().height ?? 0;
+    const {maxBitrate, scaleResolutionDownBy, maxFramerate} = resolveQuality(
+        quality,
+        sourceHeight,
+        loadSettings().framerate
+    );
+    const sender = peer.getSenders().find((s) => s.track && s.track.kind === 'video');
+    if (!sender) {
+        return;
+    }
+    const params = sender.getParameters();
+    if (!params.encodings || params.encodings.length === 0) {
+        params.encodings = [{}];
+    }
+    params.encodings[0].maxBitrate = maxBitrate;
+    params.encodings[0].scaleResolutionDownBy = scaleResolutionDownBy;
+    params.encodings[0].maxFramerate = maxFramerate;
+    await sender.setParameters(params);
+};
 
 const hostSession = async ({
     sid,
@@ -60,8 +91,15 @@ const hostSession = async ({
         send({type: 'hostice', payload: {sid: sid, value: event.candidate}});
     };
 
+    let qualityApplied = false;
     peer.onconnectionstatechange = (event) => {
         console.log('host change', event);
+        if (peer.connectionState === 'connected' && !qualityApplied) {
+            qualityApplied = true;
+            applyStreamQuality(peer, stream, loadSettings().streamQuality).catch((err) => {
+                console.warn('Could not apply initial stream quality', err);
+            });
+        }
         if (peer.connectionState === 'closed' || peer.connectionState === 'failed') {
             peer.close();
             done();
@@ -364,6 +402,19 @@ export const useRoom = (config: UIConfig): UseRoom => {
         setState((current) => (current ? {...current, hostStream: undefined} : current));
     };
 
+    const setStreamQuality = async (quality: StreamQuality): Promise<void> => {
+        if (!stream.current) {
+            return;
+        }
+        await Promise.all(
+            Object.values(host.current).map((peer) =>
+                applyStreamQuality(peer, stream.current!, quality).catch((err) => {
+                    console.warn('Could not apply stream quality', err);
+                })
+            )
+        );
+    };
+
     const setName = (name: string): void => {
         conn.current?.send(JSON.stringify({type: 'name', payload: {username: name}}));
     };
@@ -393,5 +444,5 @@ export const useRoom = (config: UIConfig): UseRoom => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    return {state, room, share, stopShare, setName};
+    return {state, room, share, stopShare, setName, setStreamQuality};
 };

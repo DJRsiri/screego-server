@@ -14,6 +14,7 @@ import {ConnectedRoom} from './useRoom';
 import {useSnackbar} from 'notistack';
 import {RoomUser} from './message';
 import {useSettings, VideoDisplayMode} from './settings';
+import {StreamQuality} from './streamQuality';
 import {SettingDialog} from './SettingDialog';
 
 const HostStream: unique symbol = Symbol('mystream');
@@ -58,11 +59,13 @@ export const Room = ({
     share,
     stopShare,
     setName,
+    setStreamQuality,
 }: {
     state: ConnectedRoom;
     share: () => void;
     stopShare: () => void;
     setName: (name: string) => void;
+    setStreamQuality: (quality: StreamQuality) => Promise<void>;
 }) => {
     const {classes} = useStyles();
     const [open, setOpen] = React.useState(false);
@@ -74,6 +77,15 @@ export const Room = ({
     const [videoElement, setVideoElement] = React.useState<FullScreenHTMLVideoElement | null>(null);
 
     useShowOnMouseMovement(setShowControl);
+
+    React.useEffect(() => {
+        if (state.hostStream && settings.streamQuality) {
+            setStreamQuality(settings.streamQuality).catch((err) =>
+                console.warn('Could not apply stream quality change', err)
+            );
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [settings.streamQuality, state.hostStream]);
 
     const handleFullscreen = useCallback(() => requestFullscreen(videoElement), [videoElement]);
 
