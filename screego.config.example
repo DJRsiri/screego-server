@@ -109,6 +109,11 @@ SCREEGO_SESSION_TIMEOUT_SECONDS=0
 # if the room should be closed when the room owner leaves
 SCREEGO_CLOSE_ROOM_WHEN_OWNER_LEAVES=true
 
+# Defines the default stream quality preset for clients who have not set one.
+# This is only the initial default; users can override it in the settings dialog.
+# Possible values: low | medium | high | original
+SCREEGO_DEFAULT_STREAM_QUALITY=original
+
 # The loglevel (one of: debug, info, warn, error)
 SCREEGO_LOG_LEVEL=info
 
