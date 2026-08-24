@@ -29,6 +29,7 @@ type UIConfig struct {
 	Version                  string `json:"version"`
 	RoomName                 string `json:"roomName"`
 	CloseRoomWhenOwnerLeaves bool   `json:"closeRoomWhenOwnerLeaves"`
+	DefaultStreamQuality     string `json:"defaultStreamQuality"`
 }
 
 func Router(conf config.Config, rooms *ws.Rooms, users *auth.Users, version string) *mux.Router {
@@ -51,6 +52,7 @@ func Router(conf config.Config, rooms *ws.Rooms, users *auth.Users, version stri
 			Version:                  version,
 			RoomName:                 rooms.RandRoomName(),
 			CloseRoomWhenOwnerLeaves: conf.CloseRoomWhenOwnerLeaves,
+			DefaultStreamQuality:     conf.DefaultStreamQuality,
 		})
 	})
 	router.Methods("GET").Path("/health").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
