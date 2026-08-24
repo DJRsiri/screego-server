@@ -68,6 +68,8 @@ type Config struct {
 	TurnDenyPeersParsed []*net.IPNet `ignored:"true"`
 
 	CloseRoomWhenOwnerLeaves bool `default:"true" split_words:"true"`
+
+	DefaultStreamQuality string `default:"original" split_words:"true"`
 }
 
 func (c Config) parsePortRange() (uint16, uint16, error) {
