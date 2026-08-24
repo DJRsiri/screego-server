@@ -1,4 +1,5 @@
 import React from 'react';
+import {QualityPreset, StreamQuality} from './streamQuality';
 export const CodecBestQuality: PreferredCodec = {mimeType: 'BEST_QUALITY'};
 export const CodecDefault: PreferredCodec = {mimeType: 'DEFAULT'};
 
@@ -38,6 +39,7 @@ export interface Settings {
     displayMode: VideoDisplayMode;
     preferCodec?: PreferredCodec;
     framerate: number;
+    streamQuality: StreamQuality;
 }
 export interface PreferredCodec {
     mimeType: string;
@@ -53,25 +55,37 @@ export enum VideoDisplayMode {
 
 const SettingsKey = 'screegoSettings';
 
+const defaults = (): Settings => ({
+    displayMode: VideoDisplayMode.FitToWindow,
+    framerate: 30,
+    streamQuality: {mode: 'preset', preset: 'original'},
+});
+
+// 当 localStorage 无用户首选项时，写入服务端下发的默认档位(仅启动时调用一次)。
+export const applyStreamQualityDefault = (preset: QualityPreset): void => {
+    const raw = localStorage.getItem(SettingsKey);
+    const parsed = raw ? (JSON.parse(raw) as Partial<Settings>) : {};
+    if (parsed.streamQuality != null) {
+        return;   // 用户已设置，不覆盖
+    }
+    saveSettings({...defaults(), ...parsed, streamQuality: {mode: 'preset', preset}});
+};
+
 export const loadSettings = (): Settings => {
     const settings: Partial<Settings> = JSON.parse(localStorage.getItem(SettingsKey) ?? '{}') ?? {};
-
-    const defaults: Settings = {
-        displayMode: VideoDisplayMode.FitToWindow,
-        framerate: 30,
-    };
 
     if (settings && typeof settings === 'object') {
         return {
             name: settings.name?.toString(),
-            framerate: settings.framerate ?? defaults.framerate,
+            framerate: settings.framerate ?? defaults().framerate,
             displayMode:
                 Object.values(VideoDisplayMode).find((mode) => mode === settings.displayMode) ??
-                defaults.displayMode,
+                defaults().displayMode,
             preferCodec: settings.preferCodec ?? CodecDefault,
+            streamQuality: settings.streamQuality ?? defaults().streamQuality,
         };
     }
-    return defaults;
+    return defaults();
 };
 
 export const saveSettings = (settings: Settings): void => {
