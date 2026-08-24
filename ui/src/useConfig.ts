@@ -2,6 +2,7 @@ import {RoomMode, UIConfig} from './message';
 import {useSnackbar} from 'notistack';
 import React from 'react';
 import {urlWithSlash} from './url';
+import {applyStreamQualityDefault} from './settings';
 
 export interface UseConfig extends UIConfig {
     login: (username: string, password: string) => Promise<void>;
@@ -20,12 +21,14 @@ export const useConfig = (): UseConfig => {
         version: 'unknown',
         roomName: 'unknown',
         closeRoomWhenOwnerLeaves: true,
+        defaultStreamQuality: 'original',
     });
 
     const refetch = React.useCallback(async () => {
-        return fetch(`${urlWithSlash}config`)
-            .then((data) => data.json())
-            .then(setConfig);
+        const res = await fetch(`${urlWithSlash}config`);
+        const config = (await res.json()) as UseConfig;
+        applyStreamQualityDefault(config.defaultStreamQuality);
+        setConfig(config);
     }, [setConfig]);
 
     const login = async (username: string, password: string) => {

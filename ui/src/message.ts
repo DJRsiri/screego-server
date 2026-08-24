@@ -1,3 +1,5 @@
+import {QualityPreset} from './streamQuality';
+
 export enum ShareMode {
     Everyone = 'Everyone',
     Selected = 'Selected',
@@ -12,6 +14,7 @@ export interface UIConfig {
     version: string;
     roomName: string;
     closeRoomWhenOwnerLeaves: boolean;
+    defaultStreamQuality: QualityPreset;
 }
 
 export interface RoomConfiguration {
